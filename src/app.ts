@@ -28,47 +28,24 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use("/uploads", express.static("./uploads"));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-// app.use(cors({ credentials: true, origin: true }));
-app.use(
-  cors({
-    origin: [
-      "http://localhost:3002",   // dev frontend
-      "http://glamour-resto.uz"  // production frontend
-    ],
-    credentials: true,           // cookie yuborish uchun
-  })
-);
-
+app.use(cors({ credentials: true, origin: true }));
 app.use(cookieParser());
 app.use(morgan(MORGAN_FORMAT));
 
 // 2- SESSIONS
-// app.use(
-//   session({
-//     secret: String(process.env.SESSION_SECRET),
-//     cookie: {
-//       maxAge: 1000 * 3600 * 6, // 3h
-//       httpOnly: true,
-//     },
-//     store: store,
-//     resave: true,
-//     saveUninitialized: true,
-//   })
-// );
 app.use(
   session({
     secret: String(process.env.SESSION_SECRET),
-    resave: false,
-    saveUninitialized: false,
-    store: store,
     cookie: {
-      maxAge: 1000 * 3600 * 6,
-      httpOnly: true,        // backend faqat o‘qiydi
-      sameSite: "lax",       // cross-site uchun "none" + secure:true (production)
-      secure: false,         // HTTPS bo‘lsa true qilish kerak
+      maxAge: 1000 * 3600 * 6, // 3h
+      httpOnly: true,
     },
+    store: store,
+    resave: true,
+    saveUninitialized: true,
   })
 );
+
 
 app.use(function (req, res, next) {
   const sessionInstance = req.session as T;
