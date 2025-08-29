@@ -12,6 +12,9 @@ import { shapeIntoMongooseObject } from "../libs/config";
 import { Error } from "mongoose";
 
 class MemberService {
+  getMemberById(userId: any): Member | PromiseLike<Member> {
+    throw new Error("Method not implemented.");
+  }
   private readonly memberModel;
 
   constructor() {

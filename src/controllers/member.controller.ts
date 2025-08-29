@@ -41,10 +41,16 @@ memberController.signup = async (req: Request, res: Response) => {
       token = await authService.createToken(result);
     console.log("token => ", token);
 
-    res.cookie("accessToken", token, {
-      maxAge: AUTH_TIMER * 3600 * 1000,
-      httpOnly: false,
-    });
+    // res.cookie("accessToken", token, {
+    //   maxAge: AUTH_TIMER * 3600 * 1000,
+    //   httpOnly: false,
+    // });
+       res.cookie("accessToken", token, {
+         maxAge: AUTH_TIMER * 3600 * 1000,
+         httpOnly: true,        // xavfsiz
+         sameSite: "lax",       // yoki cross-site bo‘lsa "none"
+         secure: false,         // HTTPS bo‘lsa true
+});
 
     res.status(HttpCode.CREATED).json({ member: result, accessToken: token });
   } catch (err) {
@@ -63,10 +69,16 @@ memberController.login = async (req: Request, res: Response) => {
       result = await memberService.login(input),
       token = await authService.createToken(result);
 
-    res.cookie("accessToken", token, {
-      maxAge: AUTH_TIMER * 3600 * 1000,
-      httpOnly: false,
-    });
+    // res.cookie("accessToken", token, {
+    //   maxAge: AUTH_TIMER * 3600 * 1000,
+    //   httpOnly: false,
+    // });
+       res.cookie("accessToken", token, {
+         maxAge: AUTH_TIMER * 3600 * 1000,
+         httpOnly: true,        // xavfsiz
+         sameSite: "lax",       // yoki cross-site bo‘lsa "none"
+         secure: false,         // HTTPS bo‘lsa true
+});
 
     res.status(HttpCode.OK).json({ member: result, accessToken: token });
   } catch (err) {
@@ -76,18 +88,49 @@ memberController.login = async (req: Request, res: Response) => {
   }
 };
 
-memberController.logout = (req: ExtendedRequest, res: Response) => {
+// memberController.logout = (req: ExtendedRequest, res: Response) => {
+//   try {
+//     console.log("logout");
+//     console.log("res", res);
+//     res.cookie("accessToken", null, { maxAge: 0, httpOnly: true });
+//     res.status(HttpCode.OK).json({ logout: true });
+//   } catch (err) {
+//     console.log("Erro, logout", err);
+//     if (err instanceof Errors) res.status(err.code).json(err);
+//     else res.status(Errors.standard.code).json(Errors.standard);
+//   }
+// };
+memberController.logout = (req: { session: { destroy: (arg0: (err: any) => any) => void; }; }, res: {
+    cookie: (arg0: string, arg1: string, arg2: {
+      maxAge: number; httpOnly: boolean; sameSite: string; // cross-site cookie uchun
+      secure: boolean;
+    }) => void; status: (arg0: number) => { (): any; new(): any; json: { (arg0: { error?: string; logout?: boolean; }): void; new(): any; }; }; clearCookie: (arg0: string) => void;
+  }) => {
   try {
-    console.log("logout");
-    console.log("res", res);
-    res.cookie("accessToken", null, { maxAge: 0, httpOnly: true });
-    res.status(HttpCode.OK).json({ logout: true });
+    // cookie o‘chirish
+    res.cookie("accessToken", "", {
+      maxAge: 0,
+      httpOnly: true,
+      sameSite: "none",   // cross-site cookie uchun
+      secure: false,      // HTTPS bo‘lsa true
+    });
+
+    // session ni tozalash
+    req.session.destroy((err: any) => {
+      if (err) {
+        console.log("Session destroy error:", err);
+        return res.status(500).json({ error: "Something went wrong" });
+      }
+
+      res.clearCookie("connect.sid"); // express-session cookie
+      res.status(200).json({ logout: true });
+    });
   } catch (err) {
     console.log("Erro, logout", err);
-    if (err instanceof Errors) res.status(err.code).json(err);
-    else res.status(Errors.standard.code).json(Errors.standard);
+    res.status(500).json({ error: "Something went wrong" });
   }
 };
+
 
 memberController.getMemberDetail = async (
   req: ExtendedRequest,
@@ -142,6 +185,8 @@ memberController.verifyAuth = async (
   next: NextFunction
 ) => {
   try {
+    console.log(req.cookies); // verifyAuth ichida
+
     const token = req.cookies["accessToken"];
     if (token) req.member = await authService.checkAuth(token);
     if (!req.member)
